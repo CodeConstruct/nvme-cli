@@ -4363,7 +4363,7 @@ ret:
 static int reset(int argc, char **argv, struct command *cmd, struct plugin *plugin)
 {
 	const char *desc = "Resets the NVMe controller\n";
-	struct nvme_dev *dev;
+	struct nvme_dev *dev = NULL;
 	int err;
 
 	OPT_ARGS(opts) = {
@@ -4386,7 +4386,7 @@ ret:
 static int ns_rescan(int argc, char **argv, struct command *cmd, struct plugin *plugin)
 {
 	const char *desc = "Rescans the NVMe namespaces\n";
-	struct nvme_dev *dev;
+	struct nvme_dev *dev = NULL;
 	int err;
 
 	OPT_ARGS(opts) = {
