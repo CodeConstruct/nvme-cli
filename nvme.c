@@ -4212,6 +4212,9 @@ static int fw_download(int argc, char **argv, struct command *cmd, struct plugin
 				printf("\n");
 				fflush(stdout);
 			}
+			fprintf(stderr,
+				"fw-download: failed on offset 0x%08x/0x%08x\n",
+				cfg.offset, fw_size);
 			if (err < 0)
 				fprintf(stderr, "fw-download: %s\n",
 					nvme_strerror(errno));
