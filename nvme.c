@@ -4113,7 +4113,8 @@ static int fw_download(int argc, char **argv, struct command *cmd, struct plugin
 	const char *xfer = "transfer chunksize limit";
 	const char *offset = "starting dword offset, default 0";
 	const char *progress = "display firmware transfer progress";
-	unsigned int fw_size;
+	const unsigned int max_retries = 3;
+	unsigned int fw_size, retry;
 	struct nvme_dev *dev;
 	void *fw_buf, *buf;
 	int err, fw_fd = -1;
@@ -4198,6 +4199,8 @@ static int fw_download(int argc, char **argv, struct command *cmd, struct plugin
 			fflush(stdout);
 		}
 
+		retry = 0;
+retry:
 		struct nvme_fw_download_args args = {
 			.args_size	= sizeof(args),
 			.offset		= cfg.offset,
@@ -4208,6 +4211,8 @@ static int fw_download(int argc, char **argv, struct command *cmd, struct plugin
 		};
 		err = nvme_cli_fw_download(dev, &args);
 		if (err) {
+			bool retryable;
+
 			if (cfg.progress) {
 				printf("\n");
 				fflush(stdout);
@@ -4220,6 +4225,20 @@ static int fw_download(int argc, char **argv, struct command *cmd, struct plugin
 					nvme_strerror(errno));
 			else
 				nvme_show_status(err);
+
+			/* we can retry on transport errors, non-NVMe-type
+			 * errors (ie, MI transport), or if the NVMe-type error
+			 * does not indicate Do Not Resend
+			 */
+			retryable = err < 0 ||
+				nvme_status_get_type(err) != NVME_STATUS_TYPE_NVME ||
+				!(nvme_status_get_value(err) & NVME_SC_DNR);
+
+			if (++retry < max_retries && retryable) {
+				fprintf(stderr, "retrying offset %x (%u/%u)\n",
+					cfg.offset, retry, max_retries);
+				goto retry;
+			}
 			break;
 		}
 		fw_buf     += cfg.xfer;
